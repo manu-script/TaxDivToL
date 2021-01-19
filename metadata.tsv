@@ -1,0 +1,4 @@
+sample	read1	read2	season
+S27DEC19	fastq/S27DEC19_R1.fastq.gz	fastq/S27DEC19_R2.fastq.gz	DEC19
+S28DEC19	fastq/S28DEC19_R1.fastq.gz	fastq/S28DEC19_R2.fastq.gz	DEC19
+S29DEC19	fastq/S29DEC19_R1.fastq.gz	fastq/S29DEC19_R2.fastq.gz	DEC19
