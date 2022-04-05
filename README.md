@@ -2,12 +2,9 @@
 
 List of files in the repo:
 
-1. Snakemake pipeline - mmseqs2.smk
-2. Metadata file - metadata.tsv
-3. Python script preprocessing MMseqs2 LCA output - mmseqs_lca_process.py
-4. Python script for filtering taxonomic assignments - mmseqs_lca_filter.py
-5. **(Supporting data)** Final filtered taxonomic counts file - counts.tsv
-6. R script for generating accumulation curves - mmseqs_inext.R
-7. R script for analysing community similarity - mmseqs_spader.R
+1. *Metadata file* - metadata.tsv
+2. *Snakemake pipeline* to perform taxonomic annotation & filtering - snakemake_workflow.smk
+3. *R script* to create Richness Accumulation & Sample Coverage plots - scripts/plot.richness.coverage.R
+4. *R script* to compute Coefficient of Variation of Richness at Optimal Depth - scripts/calc.richness.cv.R
 
 Correspondence: smanu@ccmb.res.in
