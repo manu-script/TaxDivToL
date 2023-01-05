@@ -1,0 +1,7 @@
+channels:
+ - bioconda
+dependencies:
+ - bbmap=38.97
+ - samtools=1.15.1
+ - seqkit=2.2
+ - gfatools=0.5

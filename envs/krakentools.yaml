@@ -1,0 +1,6 @@
+channels:
+ - bioconda
+dependencies:
+ - krakentools=1.2
+ - kraken-biom=1.0.1
+ - krona=2.8.1

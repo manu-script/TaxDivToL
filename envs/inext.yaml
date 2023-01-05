@@ -1,0 +1,5 @@
+channels:
+ - conda-forge
+dependencies:
+ - r-inext=3.0.0
+ - r-argparse=2.1.5

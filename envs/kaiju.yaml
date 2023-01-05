@@ -1,0 +1,5 @@
+channels:
+ - bioconda
+dependencies:
+ - kaiju=1.9.0
+ - seqkit=2.2
