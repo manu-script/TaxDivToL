@@ -1,10 +1,15 @@
-# Metagenomic Workflow for Biomonitoring across the Tree of Life using PCR-free Ultra-deep Sequencing of Extracellular eDNA
+Supporting code for the manuscript:
+
+# Taxonomic diversity assessment across the tree of life from extracellular eDNA
+
+Manu et al., 2023
 
 List of files in the repo:
 
-1. *Metadata file* - metadata.tsv
-2. *Snakemake pipeline* to perform taxonomic annotation & filtering - snakemake_workflow.smk
-3. *R script* to create Richness Accumulation & Sample Coverage plots - scripts/plot.richness.coverage.R
-4. *R script* to compute Coefficient of Variation of Richness at Optimal Depth - scripts/calc.richness.cv.R
+1. **metadata.tsv** - Metadata spreadsheet
+2. **envs/** - Conda environments used for the snakemake workflow
+3. **scripts/** - R scripts used to perform the statistical analyses and visualizations
+4. **create_databases.smk** - Snakemake workflow used to download and set up the databases
+5. **analysis_workflow.smk** - Snakemake workflow used to perform the taxonomic analyses
 
 Correspondence: smanu@ccmb.res.in
