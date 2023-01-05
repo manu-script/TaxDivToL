@@ -1,0 +1,17 @@
+sample	station	season	sector	month	year	temp	salinity
+S27DEC19	S27	Winter	Northern	DEC	2019	19.5	4.113
+S28DEC19	S28	Winter	Northern	DEC	2019	19.7	0.951
+S29DEC19	S29	Winter	Central	DEC	2019	19.5	0.828
+S14JUL20	S14	Monsoon	Central	JUL	2020	33.2	14.95
+S14NOV20	S14	Winter	Central	NOV	2020	23.5	4.195
+S17JUL20	S17	Monsoon	Central	JUL	2020	32	15.18
+S17NOV20	S17	Winter	Central	NOV	2020	24.5	5.567
+S1JUL20	S1	Monsoon	Southern	JUL	2020	32.5	8.197
+S1MAR20	S1	Summer	Southern	MAR	2020	30.5	8.126
+S26JUL20	S26	Monsoon	Northern	JUL	2020	33	4.797
+S26MAR20	S26	Summer	Northern	MAR	2020	25.5	0.837
+S29JUL20	S29	Monsoon	Central	JUL	2020	31	10.29
+S30JUL20	S30	Monsoon	Northern	JUL	2020	32	1.749
+S6JUL20	S6	Monsoon	Southern	JUL	2020	30	9.695
+S6MAR20	S6	Summer	Southern	MAR	2020	27.5	7.348
+S6NOV20	S6	Winter	Southern	NOV	2020	23	5.453
