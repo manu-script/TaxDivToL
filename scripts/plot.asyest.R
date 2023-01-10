@@ -11,8 +11,8 @@ df <- read.table(args$asyest, header=TRUE, sep='\t')
 df$Estimator <- round(df$Estimator)
 levels <- c("Viruses","Archaea","Bacteria","Eukaryota","Metazoa","Fungi","Viridiplantae","Arthropoda","Chordata","Actinopteri","Mammalia","Aves","Amphibia")
 
-plt <- ggplot(df, aes(x=factor(Assemblage, level=levels), y=Estimator)) + theme_bw(base_size=8) +
-              geom_bar(stat="identity") + geom_errorbar(aes(ymin=Estimator-s.e., ymax=Estimator+s.e.), width=0.2) +
+plt <- ggplot(df, aes(x=factor(Assemblage, level=levels), y=Estimator, fill=Estimator)) + theme_bw(base_size=8) +
+              geom_bar(stat="identity") + scale_fill_continuous(type = "gradient", trans="log") + geom_errorbar(aes(ymin=Estimator-s.e., ymax=Estimator+s.e.), width=0.2) +
               geom_text(aes(y=Estimator-s.e., label=Estimator), vjust=1.5, color="white", size=2) +
               scale_y_continuous(expand=c(0,0), breaks=c(1,10,100,1000), limits=c(1,1000), trans="log10") +
               annotation_logticks(sides="l", outside = TRUE) + coord_cartesian(clip = "off") +

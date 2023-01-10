@@ -16,9 +16,9 @@ df.line$Method <- factor(df.line$Method,
                          c("Rarefaction", "Extrapolation"))
 
 plt <- ggplot(df, aes(x=t, y=qD)) + theme_bw(base_size=8) +
-              geom_point(color="black", size=3, data=df.point) +
-              geom_line(aes(linetype=Method), color="black", lwd=1, data=df.line) +
-              geom_ribbon(aes(ymin=qD.LCL, ymax=qD.UCL), color="black", alpha=0.2) +
+              geom_point(color="steelblue2", size=3, data=df.point) +
+              geom_line(aes(linetype=Method), color="steelblue2", lwd=1, data=df.line) +
+              geom_ribbon(aes(ymin=qD.LCL, ymax=qD.UCL), fill="steelblue2", alpha=0.2) +
               scale_x_continuous(expand=c(0,0), limits=c(0,25)) +
               scale_y_continuous(expand=c(0,0), limits=c(800,1100)) +
               labs(x='Sequencing depth (billions)', y='Family richness') +
