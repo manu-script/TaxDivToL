@@ -1,0 +1,6 @@
+channels:
+ - conda-forge
+ - r
+dependencies:
+ - r-spader=0.1.1
+ - r-argparse
