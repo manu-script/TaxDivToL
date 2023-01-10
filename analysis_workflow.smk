@@ -36,14 +36,17 @@ rule all:
         expand("diversity/taxonomy/counts/{sample}.filtered.mpa", sample=meta.index.unique()),
         "diversity/taxonomy/counts/combined.filtered.counts.matrix.tsv",
         expand("diversity/taxonomy/checklist/{taxon}.checklist.tsv", taxon="Actinopteri"),
-        "diversity/taxonomy/counts/combined.filtered.taxonomy.table.tsv",
-        expand("diversity/taxonomy/phyloseq/NMDS.samples.{taxon}.png", taxon=["ToL","Viruses","Archaea","Bacteria","Eukaryota"]),
-        "diversity/taxonomy/phyloseq/betadiv.png",
+        expand("diversity/taxonomy/checklist/{taxon}.relabund.png", taxon="Actinopteri"),
         expand("diversity/taxonomy/incidences/{taxon}.freq.mpa", taxon=taxa),
         expand("diversity/taxonomy/inext/{taxon}.inext.tsv", taxon=taxa),
         "diversity/taxonomy/inext/plots/ToL.accum.png",
         "diversity/taxonomy/inext/plots/asyest.png",
-
+        expand("diversity/taxonomy/incidences/{taxon}.freq.counts.tsv", taxon=["ToL"]),
+        expand("diversity/taxonomy/spader/jaccard.dist.matrix.{taxon}.tsv", taxon=["ToL"]),
+        expand("diversity/taxonomy/spader/jaccard.spatiotemporal.dist.{taxon}.tsv", taxon=["ToL"]),
+        "diversity/taxonomy/counts/combined.filtered.taxonomy.table.tsv",
+        expand("diversity/taxonomy/phyloseq/NMDS.samples.{taxon}.png", taxon=["ToL","Viruses","Archaea","Bacteria","Eukaryota"]),
+        "diversity/taxonomy/phyloseq/betadiv.png",
 
 rule db_composition:
     input:
@@ -231,11 +234,10 @@ rule make_report:
         kreport = "diversity/taxonomy/counts/{sample}.kreport",
         mpa = "diversity/taxonomy/counts/{sample}.mpa"
     threads: 2
-    conda: "envs/krakentools.yaml"
     log: "logs/diversity/taxonomy/make_kreport/{sample}.log"
     shell: """
-            make_kreport.py -t {input.tax} -o {output.kreport} -i <(bgzip -@ {threads} -cd {input.lca}) &> {log}
-            kreport2mpa.py -r {output.kreport} -o {output.mpa} &>> {log}
+            python tools/KrakenTools/make_kreport.py -t {input.tax} -o {output.kreport} -i <(bgzip -@ {threads} -cd {input.lca}) &> {log}
+            python tools/KrakenTools/kreport2mpa.py -r {output.kreport} -o {output.mpa} &>> {log}
     """
 
 rule classified_reads:
@@ -275,8 +277,8 @@ rule combine_reports:
     threads: 1
     log: "logs/diversity/taxonomy/combine_reports.log"
     shell: """
-            combine_kreports.py -r {input.kreport} --no-headers --only-combined -o {output.kreport} &> {log}
-            kreport2mpa.py -r {output.kreport} -o {output.mpa} &>> {log}
+            python tools/KrakenTools/combine_kreports.py -r {input.kreport} --no-headers --only-combined -o {output.kreport} &> {log}
+            python tools/KrakenTools/kreport2mpa.py -r {output.kreport} -o {output.mpa} &>> {log}
             sed -i 's/^k__/d__/' {output.mpa}
            """
 
@@ -407,69 +409,34 @@ rule checklist:
         df = df.merge(proteomes_families, on="family", how="left")
         df.to_csv(output.tsv, sep="\t", header=True, index=False)
 
-rule taxonomy_table:
+rule checklist_relabund:
     input:
+        checklist = rules.checklist.output.tsv,
         counts = rules.count_matrix.output.counts
     output:
-        tsv = "diversity/taxonomy/counts/combined.filtered.taxonomy.table.tsv"
+        plot = "diversity/taxonomy/checklist/{taxon}.relabund.png",
+        tsv = "diversity/taxonomy/checklist/{taxon}.relabund.tsv"
     threads: 1
     run:
-        counts = pd.read_csv(input.counts, sep='\t', header=0, usecols=["Lineage"])
-        counts[["Domain", "Phylum", "Class", "Order", "Family"]] = "NA"
-        for idx, row in counts.iterrows():
-            levels = {i.split("_")[0]:i for i in row["Lineage"].split("|")}
-            counts.loc[idx, "Domain"] = levels.get("d")
-            counts.loc[idx, "Phylum"] = levels.get("p")
-            counts.loc[idx, "Class"] = levels.get("c")
-            counts.loc[idx, "Order"] = levels.get("o")
-            counts.loc[idx, "Family"] = levels.get("f")
-        counts.to_csv(output.tsv, sep='\t', header=True, index=False)
-
-rule phyloseq:
-    input:
-        counts = rules.count_matrix.output.counts,
-        tax = rules.taxonomy_table.output.tsv,
-        meta = "metadata.tsv",
-        script = "scripts/phyloseq.R"
-    output:
-        nmds = "diversity/taxonomy/phyloseq/NMDS.samples.{taxon}.png",
-        distmat = "diversity/taxonomy/phyloseq/dist.matrix.{taxon}.tsv"
-    threads: 1
-    conda: "envs/phyloseq.yaml"
-    log: "logs/diversity/taxonomy/phyloseq/{taxon}.log"
-    shell: """
-            Rscript {input.script} --otu {input.counts} --tax {input.tax} --meta {input.meta} --domain {wildcards.taxon} --nmds {output.nmds} --dist {output.distmat} &> {log}
-    """
-
-rule betadiv:
-    input:
-        distmat = expand("diversity/taxonomy/phyloseq/dist.matrix.{taxon}.tsv", taxon=["ToL","Viruses","Archaea","Bacteria","Eukaryota"]),
-        meta = "metadata.tsv",
-        script = "scripts/plot.betadiv.R"
-    output:
-        plot = "diversity/taxonomy/phyloseq/betadiv.png",
-        dist = "diversity/taxonomy/phyloseq/betadiv.tsv",
-    threads: 1
-    log: "logs/diversity/taxonomy/betadiv.log"
-    run:
-        dist = []
-        for domain in ["ToL","Viruses","Archaea","Bacteria","Eukaryota"]:
-            distmat = pd.read_csv(f"diversity/taxonomy/phyloseq/dist.matrix.{domain}.tsv", sep="\t", header=0, index_col=0)
-            meta = pd.read_csv(input.meta, sep='\t', header=0, index_col="sample")
-            meta = meta[meta["year"]==2020]
-            if domain == "ToL":
-                domain = "Tree of Life"
-            for season,rows in meta.groupby("season"):
-                for i,j in itertools.combinations(rows.index, 2):
-                    bray = round(distmat.loc[i,j], 2)
-                    dist.append((i,j,bray, "Spatial beta diversity", domain))
-            for station,rows in meta.groupby("station"):
-                for i,j in itertools.combinations(rows.index, 2):
-                    bray = round(distmat.loc[i,j], 2)
-                    dist.append((i,j,bray, "Temporal beta diversity", domain))
-        dist = pd.DataFrame(dist, columns=["sample1", "sample2", "bray", "type", "domain"])
-        dist.to_csv(output.dist, sep='\t', header=True, index=False)
-        shell("Rscript {input.script} --dist {output.dist} --plot {output.plot} &> {log}")
+        checklist = pd.read_csv(input.checklist, sep='\t', header=0)
+        checklist = checklist[["family"]][(checklist["checklist"]) & (checklist["uniprot_proteome"])]
+        counts = pd.read_csv(input.counts, sep='\t', header=0)
+        counts["family"] = counts["Lineage"].map(lambda x: x.split("|")[-1].replace("f__", ""))
+        counts = checklist.merge(counts, on="family", how="left").fillna(0)
+        counts.index = counts["family"].tolist()
+        counts = counts.drop(columns=["Lineage", "family"])
+        counts["total"] = counts.apply(lambda x: x.sum(), axis=1)
+        counts = counts.sort_values(by="total", ascending=False)
+        counts = counts.drop(columns=["total"])
+        counts = counts.apply(lambda x: x/x.sum())
+        counts = counts[seasonal]
+        counts.to_csv(output.tsv, sep="\t", header=True, index=True)
+        plt.figure(figsize=(4.33, 4.33))
+        sns.set(font_scale=0.5)
+        sns.heatmap(counts, xticklabels=1, yticklabels=1, cmap="rainbow", norm=LogNorm())
+        plt.tick_params(axis='both', which='major', labelsize=8)
+        plt.tight_layout()
+        plt.savefig(output.plot, dpi=300)
 
 rule incidence_freq:
     input:
@@ -537,3 +504,126 @@ rule asyest:
         df = df[df["Diversity"]=="Species richness"]
         df.to_csv(output.asyst, sep='\t', header=True, index=False)
         shell("Rscript {input.script} --asyest {output.asyst} --plot {output.plot} &> {log}")
+
+rule samples_inc_freq:
+    input:
+        kreport = expand("diversity/taxonomy/counts/{sample}.kreport", sample=seasonal),
+        counts = rules.count_matrix.output.counts
+    output:
+        inc = "diversity/taxonomy/incidences/{taxon}.freq.counts.tsv"
+    run:
+        df = pd.read_csv(input.counts, sep='\t', header=0, index_col=["Lineage"])
+        if wildcards.taxon != "ToL":
+            df = df[df.index.str.contains(wildcards.taxon)]
+        df = pd.concat([pd.DataFrame([], columns=df.columns, index=["sampling_units"]).fillna(0), df])
+        for sample in seasonal:
+            kreport = pd.read_csv(f"diversity/taxonomy/counts/{sample}.kreport", sep='\t', header=None, names=["perc", "clade", "node", "rank", "taxid", "name"], usecols=["node"])
+            reads = kreport["node"].sum()
+            size = 10000000
+            mincount = 1000
+            units = reads//size
+            df[sample] = df[sample].map(lambda x: units if (x//mincount) > units else x//mincount)
+            df.loc["sampling_units", sample] = units
+        df.to_csv(output.inc, sep='\t', header=True, index=True)
+
+rule spader:
+    input:
+        inc = rules.samples_inc_freq.output.inc,
+        script = "scripts/spader.R"
+    output:
+        jaccard = "diversity/taxonomy/spader/jaccard.dist.matrix.{taxon}.tsv",
+    conda: "envs/spader.yaml"
+    threads: 1
+    log: "logs/diversity/taxonomy/spader/{taxon}.log"
+    shell: """
+            Rscript {input.script} --inc {input.inc} --jaccard {output.jaccard} &> {log}
+    """
+
+rule richness_betadiv:
+    input:
+        jaccard = expand("diversity/taxonomy/spader/jaccard.dist.matrix.{taxon}.tsv", taxon=["ToL"]),
+        meta = "metadata.tsv"
+    output:
+        dist = "diversity/taxonomy/spader/jaccard.spatiotemporal.dist.{taxon}.tsv"
+    run:
+        dist = []
+        for taxon in ["ToL"]:
+            distmat = pd.read_csv(f"diversity/taxonomy/spader/jaccard.dist.matrix.{taxon}.tsv", sep="\t", header=0, index_col=0)
+            meta = pd.read_csv(input.meta, sep='\t', header=0, index_col="sample")
+            meta = meta[meta["year"]==2020]
+            if taxon == "ToL":
+                taxon = "Tree of Life"
+            for season,rows in meta.groupby("season"):
+                for i,j in itertools.combinations(rows.index, 2):
+                    jaccard = round(distmat.loc[i,j], 2)
+                    dist.append((i,j,jaccard, "Spatial beta diversity", taxon))
+            for station,rows in meta.groupby("station"):
+                for i,j in itertools.combinations(rows.index, 2):
+                    jaccard = round(distmat.loc[i,j], 2)
+                    dist.append((i,j,jaccard, "Temporal beta diversity", taxon))
+        dist = pd.DataFrame(dist, columns=["sample1", "sample2", "jaccard", "type", "domain"])
+        dist.to_csv(output.dist, sep='\t', header=True, index=False)
+
+rule taxonomy_table:
+    input:
+        counts = rules.count_matrix.output.counts
+    output:
+        tsv = "diversity/taxonomy/counts/combined.filtered.taxonomy.table.tsv"
+    threads: 1
+    run:
+        counts = pd.read_csv(input.counts, sep='\t', header=0, usecols=["Lineage"])
+        counts[["Domain", "Phylum", "Class", "Order", "Family"]] = "NA"
+        for idx, row in counts.iterrows():
+            levels = {i.split("_")[0]:i for i in row["Lineage"].split("|")}
+            counts.loc[idx, "Domain"] = levels.get("d")
+            counts.loc[idx, "Phylum"] = levels.get("p")
+            counts.loc[idx, "Class"] = levels.get("c")
+            counts.loc[idx, "Order"] = levels.get("o")
+            counts.loc[idx, "Family"] = levels.get("f")
+        counts.to_csv(output.tsv, sep='\t', header=True, index=False)
+
+rule phyloseq:
+    input:
+        counts = rules.count_matrix.output.counts,
+        tax = rules.taxonomy_table.output.tsv,
+        meta = "metadata.tsv",
+        script = "scripts/phyloseq.R"
+    output:
+        nmds = "diversity/taxonomy/phyloseq/NMDS.samples.{taxon}.png",
+        distmat = "diversity/taxonomy/phyloseq/dist.matrix.{taxon}.tsv"
+    threads: 1
+    conda: "envs/phyloseq.yaml"
+    log: "logs/diversity/taxonomy/phyloseq/{taxon}.log"
+    shell: """
+            Rscript {input.script} --otu {input.counts} --tax {input.tax} --meta {input.meta} --domain {wildcards.taxon} --nmds {output.nmds} --dist {output.distmat} &> {log}
+    """
+
+rule betadiv:
+    input:
+        distmat = expand("diversity/taxonomy/phyloseq/dist.matrix.{taxon}.tsv", taxon=["ToL","Viruses","Archaea","Bacteria","Eukaryota"]),
+        meta = "metadata.tsv",
+        script = "scripts/plot.betadiv.R"
+    output:
+        plot = "diversity/taxonomy/phyloseq/betadiv.png",
+        dist = "diversity/taxonomy/phyloseq/betadiv.tsv",
+    threads: 1
+    log: "logs/diversity/taxonomy/betadiv.log"
+    run:
+        dist = []
+        for domain in ["ToL","Viruses","Archaea","Bacteria","Eukaryota"]:
+            distmat = pd.read_csv(f"diversity/taxonomy/phyloseq/dist.matrix.{domain}.tsv", sep="\t", header=0, index_col=0)
+            meta = pd.read_csv(input.meta, sep='\t', header=0, index_col="sample")
+            meta = meta[meta["year"]==2020]
+            if domain == "ToL":
+                domain = "Tree of Life"
+            for season,rows in meta.groupby("season"):
+                for i,j in itertools.combinations(rows.index, 2):
+                    bray = round(distmat.loc[i,j], 2)
+                    dist.append((i,j,bray, "Spatial beta diversity", domain))
+            for station,rows in meta.groupby("station"):
+                for i,j in itertools.combinations(rows.index, 2):
+                    bray = round(distmat.loc[i,j], 2)
+                    dist.append((i,j,bray, "Temporal beta diversity", domain))
+        dist = pd.DataFrame(dist, columns=["sample1", "sample2", "bray", "type", "domain"])
+        dist.to_csv(output.dist, sep='\t', header=True, index=False)
+        shell("Rscript {input.script} --dist {output.dist} --plot {output.plot} &> {log}")
