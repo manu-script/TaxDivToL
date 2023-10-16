@@ -1,6 +1,6 @@
 Supporting code for the manuscript:
 
-# Taxonomic diversity assessment across the tree of life from extracellular eDNA
+# [Deep sequencing of extracellular eDNA  enables total biodiversity assessment of ecosystems](https://doi.org/10.22541/au.161401815.51766652/v3)
 
 Manu et al., 2023
 
